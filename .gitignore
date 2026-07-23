@@ -1,0 +1,5 @@
+.env
+.env.bak
+*.bak
+certbot/
+nginx.conf

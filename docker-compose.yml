@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    container_name: evolution_postgres
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - evolution-net
+    command:
+      - postgres
+      - -c
+      - max_connections=1000
+
+  # Redis Cache
+  redis:
+    container_name: evolution_redis
+    image: redis:latest
+    restart: always
+    command: redis-server --port 6379 --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - evolution-net
+
+  # Evolution API
+  evolution-api:
+    container_name: evolution_api
+    image: evoapicloud/evolution-api:latest
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - evolution-net
+    env_file:
+      - .env
+    environment:
+      - SERVER_URL=https:${DOMAIN}
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DATABASE}?schema=public
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/6
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=false
+
+  # n8n Workflow Automation
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:latest
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - evolution-net
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      - N8N_HOST=${DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - NODE_FUNCTION_ALLOW_EXTERNAL=redis
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      - N8N_PATH=/n8n/
+      - WEBHOOK_URL=https://${DOMAIN}/n8n/
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=America/Mexico_City
+      - TZ=America/Mexico_City
+
+  # Nginx Reverse Proxy
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks:
+      - evolution-net
+    depends_on:
+      - evolution-api
+      - n8n
+
+  # Certbot for SSL
+  certbot:
+    container_name: certbot
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_instances:
+  n8n_data:
+
+networks:
+  evolution-net:
+    name: evolution-net
+    driver: bridge
