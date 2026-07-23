@@ -1,0 +1,1527 @@
+{
+  "name": "Bite society bot auto",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "web",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1856,
+        1968
+      ],
+      "id": "224c9265-e697-48c0-a44d-c725ea87f51e",
+      "name": "Webhook1",
+      "webhookId": "b31b4202-19d0-40de-a3df-56d21af75d1f"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('extraer datos1').item.json.urlserver }}/message/sendText/{{ $('extraer datos1').item.json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('extraer datos1').item.json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('extraer datos1').item.json.chatid }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "delay",
+              "value": "={{3000}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3104,
+        1536
+      ],
+      "id": "ce4f4c4a-6a6f-489a-89e5-920775181fcc",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del webhook\nconst webhookData = $input.first().json;\n\n// Extraer remoteJid (ej: \"5213314579282@s.whatsapp.net\")\nlet remoteJid = webhookData.body.data.key.remoteJid || '';\n\n// Limpiar: quedarse con la parte antes del '@'\nlet numeroLimpio = remoteJid.split('@')[0];\n\n// Eliminar cualquier carácter no numérico (por si acaso)\nnumeroLimpio = numeroLimpio.replace(/\\D/g, '');\n\n// Si comienza con '521', cambiar a '523' (quitar el '1')\nif (numeroLimpio.startsWith('521')) {\n  numeroLimpio = '52' + numeroLimpio.substring(3);\n}\n\n// Extraer el mensaje del usuario (conversación)\nconst mensajeUsuario = webhookData.body.data.message?.conversation || '';\n\n// Preparar los campos de salida (agregamos 'mensaje')\nconst output = {\n  chatid: numeroLimpio,\n  instancia: webhookData.body.instance,\n  apikey: webhookData.body.apikey,\n  urlserver: webhookData.body.server_url,\n  mensaje: mensajeUsuario   // <-- nuevo campo\n};\n\n// Retornar para el siguiente nodo\nreturn [{ json: output }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        1712
+      ],
+      "id": "7b5d965d-5e4f-4f70-8fbb-33c6a404a425",
+      "name": "extraer datos1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "clientes",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "=eq",
+              "keyValue": "={{ $json.chatid }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.extracted_data.nombre }}"
+            },
+            {
+              "fieldId": "direccion",
+              "fieldValue": "={{ $json.extracted_data.direccion }}"
+            },
+            {
+              "fieldId": "notas_cliente",
+              "fieldValue": "={{ $json.extracted_data.notas_cliente }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        1232
+      ],
+      "id": "05aabe8b-d2ee-43ec-bfab-3e66be052644",
+      "name": "Update Cliente1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "tableId": "pedidos",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $('buscar clientes').item.json.id }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ $json.total }}"
+            },
+            {
+              "fieldId": "items",
+              "fieldValue": "={{ $json.items }}"
+            },
+            {
+              "fieldId": "direccion",
+              "fieldValue": "={{ $json.forma_entrega }}:{{ $json.direccion }}"
+            },
+            {
+              "fieldId": "nombre",
+              "fieldValue": "={{ $json.nombre }}"
+            },
+            {
+              "fieldId": "notas",
+              "fieldValue": "={{ $json.notas }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        1536
+      ],
+      "id": "03a6f1d5-a456-4e7d-b7b6-9d60e4d7db4f",
+      "name": "Create Pedido1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        1760
+      ],
+      "id": "c30b7afa-70fd-4eab-ae69-c31742aeae7f",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Dk6qp7ao5EW8R53u",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "ACTUALIZAR",
+                    "rightValue": "={{ $json.intent }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "249f89fc-25b4-4e09-923d-0c3211c4e469"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5135e3e6-1099-4b35-aaba-26e4ca7278ba",
+                    "leftValue": "PEDIDO",
+                    "rightValue": "={{ $json.intent }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "11df0b8c-520b-4b4b-9418-45fa1d4b2118",
+                    "leftValue": "CHAT",
+                    "rightValue": "={{ $json.intent }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e27ebbcf-14c5-4420-b81f-ee7521d4195f",
+                    "leftValue": "ELSE",
+                    "rightValue": "={{ $json.intent }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b7dc3fa0-aa58-4d08-84a0-f2dd7c8e735e",
+                    "leftValue": "HUMANO",
+                    "rightValue": "={{ $json.intent }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        1664
+      ],
+      "id": "021e30c8-5e6e-43e4-b95c-3f0c83fdbd8f",
+      "name": "Switch1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemma-3-27b-it",
+          "mode": "list",
+          "cachedResultName": "google/gemma-3-27b-it"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        2176
+      ],
+      "id": "4f229b87-7b05-4525-a2ba-3361c5352968",
+      "name": "OpenAI Chat Model",
+      "executeOnce": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "i9d6qXty3tQ9whrC",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "13403c8b-75fa-4cdd-88f9-fde230c5d54a",
+              "name": "chatid",
+              "value": "={{ $('extraer datos1').item.json.chatid }}",
+              "type": "string"
+            },
+            {
+              "id": "070b731c-6563-4fe5-b250-5290c81f1b0d",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1408,
+        1776
+      ],
+      "id": "c4316fe3-105f-423f-b83b-c47daf3f9831",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=={{ $('extraer datos1').item.json.instancia }}:{{ $('extraer datos1').item.json.chatid }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        752,
+        2176
+      ],
+      "id": "e93b170a-00b7-43a2-84cd-8b872074eacf",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recibir datos del flujo anterior\nconst input = $input.first().json;\nconst chatid = input.chatid || '';\n\n// Función para limpiar el mensaje de cualquier etiqueta o bloque JSON residual\nfunction cleanMessage(raw) {\n  if (!raw || typeof raw !== 'string') return '';\n  \n  let cleaned = raw;\n  \n  // Eliminar cualquier etiqueta [INTENT: ...] que pudiera haber quedado\n  cleaned = cleaned.replace(/\\[INTENT:\\s*\\w+\\s*\\]/gi, '');\n  \n  // Eliminar bloques de código markdown (```json ... ```)\n  cleaned = cleaned.replace(/```(?:json)?[\\s\\S]*?```/g, '');\n  \n  // Eliminar objetos JSON sueltos (por si acaso)\n  cleaned = cleaned.replace(/\\{[\\s\\S]*?\\}/g, '');\n  \n  // Eliminar backticks residuales\n  cleaned = cleaned.replace(/`{1,3}/g, '');\n  \n  // Eliminar espacios múltiples y recortar\n  cleaned = cleaned.replace(/\\s+/g, ' ').trim();\n  \n  return cleaned;\n}\n\n// Obtener mensaje limpio\nlet finalMessage = cleanMessage(input.output || '');\n\n// Si después de limpiar queda vacío, poner un fallback amigable\nif (!finalMessage) {\n  finalMessage = '🤗 Lo siento, estamos recibiendo muchos mensajes por el momento. Inténtalo de nuevo en 1 minuto, por favor.';\n}\n\n// Retornar solo lo necesario para el HTTP Request\nreturn {\n  json: {\n    output: finalMessage,\n    chatid: chatid\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        1632
+      ],
+      "id": "5776b46e-7547-4752-ab78-cea8efccc7b5",
+      "name": "Preparar mensaje final"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================\n// ANTI-SPAM + ANTI-DUPLICADOS (MODO BLOQUEO)\n// ==========================================\n\nconst redis = require('redis');\nconst crypto = require('crypto');\n\n// ---------- ⚙️ CONFIGURACIÓN (AJUSTA ESTOS VALORES) ----------\nconst RATE_LIMIT_SECONDS = 5;     // Tiempo mínimo entre mensajes del mismo chat\nconst DEDUP_TTL_SECONDS = 50;     // Tiempo para bloquear mensajes de texto idéntico\nconst ENABLE_RATE_LIMIT = true;   // Activar límite por tiempo\nconst ENABLE_DEDUP = true;        // Activar bloqueo de mensajes repetidos\n// -----------------------------------------------------------\n\nconst client = redis.createClient({\n  url: 'redis://redis:6379',\n  socket: { connectTimeout: 3000 }\n});\n\nclient.on('error', (err) => console.error('[REDIS ERROR]', err));\n\ntry {\n  await client.connect();\n  \n  const webhookData = $input.first().json;\n  const chatId = webhookData.body?.data?.key?.remoteJid;\n  let messageText = webhookData.body?.data?.message?.conversation || \n                    webhookData.body?.data?.message?.extendedTextMessage?.text || '';\n  \n  if (!chatId) {\n    console.warn('[FLOW] No se encontró chatId, permitiendo paso');\n    await client.quit();\n    return $input.all();\n  }\n  \n  // ----- 1️⃣ RATE LIMIT (Límite por tiempo) -----\n  if (ENABLE_RATE_LIMIT) {\n    const rateKey = `ratelimit:${chatId}`;\n    const rateResult = await client.set(rateKey, Date.now().toString(), {\n      NX: true,\n      EX: RATE_LIMIT_SECONDS\n    });\n    \n    if (rateResult === null) {\n      console.log(`[RATE LIMIT] 🚫 Mensaje bloqueado por velocidad (${RATE_LIMIT_SECONDS}s)`);\n      await client.quit();\n      return []; // DETIENE EL FLUJO\n    }\n  }\n  \n  // ----- 2️⃣ DEDUPLICACIÓN DE CONTENIDO (Mismo texto) -----\n  if (ENABLE_DEDUP && messageText) {\n    const normalizedText = messageText.trim().toLowerCase().replace(/\\s+/g, ' ');\n    const hash = crypto.createHash('md5').update(normalizedText).digest('hex');\n    const dedupKey = `dedup:${chatId}:${hash}`;\n    \n    const dedupResult = await client.set(dedupKey, '1', { NX: true, EX: DEDUP_TTL_SECONDS });\n    \n    if (dedupResult === null) {\n      console.log(`[DEDUP] 🔁 Mensaje duplicado bloqueado: \"${normalizedText}\"`);\n      await client.quit();\n      return []; // DETIENE EL FLUJO\n    }\n  }\n  \n  // Si llegó hasta aquí, el mensaje es válido\n  await client.quit();\n  console.log('[FLOW] ✅ Mensaje permitido');\n  return $input.all();\n  \n} catch (error) {\n  console.error('[ERROR]', error.message);\n  try { await client.quit(); } catch {}\n  // En caso de fallo de Redis, permitir el paso para no perder mensajes legítimos\n  console.warn('[FLOW] Redis no disponible, permitiendo paso por seguridad');\n  return $input.all();\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        1968
+      ],
+      "id": "3a7d220f-4908-432b-ba47-6358bad4868e",
+      "name": "dedup check"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c595159-82ff-4afd-8659-c5c6c8887edb",
+              "name": "output",
+              "value": "={{ $('Edit Fields3').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "7bb2ee7c-f7e9-4aee-8b22-37731651d98d",
+              "name": "chatid",
+              "value": "={{ $('Edit Fields3').item.json.chatid }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2656,
+        1232
+      ],
+      "id": "8fa435a1-bf6d-45c3-bbd8-84da366a75f9",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "924b8f2c-e64a-4211-8429-d591f8718194",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "9af35d9a-b1d4-484d-a5c1-23c457fa4232",
+              "name": "extracted_data.nombre",
+              "value": "={{ $json.extracted_data.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "cc6b9bdf-6438-486e-a30a-b0f1c0f7e76e",
+              "name": "extracted_data.direccion",
+              "value": "={{ $json.extracted_data.direccion }}",
+              "type": "string"
+            },
+            {
+              "id": "ee288fa8-dffc-405e-83b8-4f18a50c662f",
+              "name": "extracted_data.notas_cliente",
+              "value": "={{ $json.extracted_data.notas_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "4ada0727-fc40-460a-8d6c-1268c6d2991d",
+              "name": "intent",
+              "value": "={{ $json.intent }}",
+              "type": "string"
+            },
+            {
+              "id": "c0ec15d4-a411-413c-b3d9-7a8bf817bc1b",
+              "name": "chatid",
+              "value": "={{ $json.chatid }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2144,
+        1232
+      ],
+      "id": "6b2271a0-b59a-4ac9-99d3-3ea541cd79b0",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un extractor de datos especializado. Tu única función es transformar el resumen de un pedido de comida en un objeto JSON válido.\n\nINSTRUCCIONES:\n\nAnaliza el último mensaje enviado por el asistente (el resumen del pedido).\n\nExtrae el nombre del cliente, la dirección y la lista de productos.\n\nCada producto debe tener: nombre exacto, cantidad (número), sabor/salsa (si aplica) y precio unitario.\n\nSi falta algún dato, deja el campo como una cadena vacía o nulo, pero NO inventes información.\n\nTu respuesta debe ser exclusivamente el JSON solicitado por el parser.\n\nMensaje del asistente:\n{{ $json.output }}\n\nEjemplo de JSON de salida:\n{\n  \"nombre\": \"Carlos Pantoja\",\n  \"direccion\": \"Calle Falsa 123, Col. Centro, Zapopan\",\n  \"items\": [\n    {\n      \"prod\": \"Boneless 10 piezas\",\n      \"cant\": 2,\n      \"salsa\": \"Buffalo\",\n      \"precio_unitario\": 150\n    }\n  ],\n  \"total_aproximado\": 360,\n  \"metodo_entrega\": \"domicilio\",\n  \"notas_extra\": \"Sin cubiertos\"\n}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2080,
+        1536
+      ],
+      "id": "da71d2c9-a1b4-4378-a1da-f4cd4f4a25b3",
+      "name": "Cajero - Extractor JSON"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n[CONTEXTO DEL SISTEMA]\nHora: {{ $now.setZone('America/Mexico_City').format('HH:mm') }}\nDía: {{ $now.setZone('America/Mexico_City').setLocale('es').toFormat('cccc') }}\nHorario de apertura de 10 hrs a 23:45 hrs\n\n\n[MENSAJE DEL CLIENTE]\n{{ $json.mensaje_usuario }}\n\n[MENU OFICIAL- UNICA FUENTE DE VERDAD]\n{{ $json.menu_context }}\n",
+        "options": {
+          "systemMessage": "=⚠️⚠️⚠️ REGLA DE ORO (OBLIGATORIO) ⚠️⚠️⚠️\nEres el mesero virtual de Bite Society. Tu única fuente de verdad sobre productos, precios, ingredientes y salsas es \"menu_context\". Si un producto no está en el catálogo, No inventes platillos, no inventes precios ni combinaciones, solo proporciona informacion de alimentos y precios que se te van proporcionando.\n\nHabla en español mexicano, tono casual y amable. Usa emojis ocasionalmente (🍗🔥🥤).\n\nContexto del Cliente (Úsalo para personalizar):\nNombre: {{ $json.nombre }} \nDirección: {{ $json.direccion }}\nNotas: {{ $json.notas_cliente }}\n\nGuía de Conversación (Flujo Natural):\n1. Saluda con energía y ofrece el combo del dia.\n2. Si el primero mensaje llega con indicacion de que producto quiere, sigue la conversacion.\n3. Seguimiento: Escucha qué quiere el usuario. NUNCA inventes productos ni precios. Si piden algo que no está, di que no lo manejas y ofrece una alternativa del menú.\n4. Personalización: Al elegir producto, pide la cantidad y pregunta qué salsa quiere (obten la informacion del menu).\n5. Upsell: Sugiere complementos (papas, refrescos) antes de cerrar.\n6. NO LO OLVIDES!! Notas Extras: Pregunta si quiere añadir notas antes de confirmar pedido (ej. \"salsa aparte\", \"bien doraditos\", \"sin cubiertos\").\n7. Resumen y Datos: Antes de confirmar, muestra un resumen CLARO: Productos, Cantidades, precio individual por producto, Salsas, Nombre del cliente y forma de entrega (entrega en restaurante o envio a domicilio). Pide los datos que falten. (si los el contexto esta vacio pide los datos que necesites )\n8. Confirmación Final: Muestra el total y resumen y pregunta: \"¿Confirmas tu pedido para mandarlo a cocina? Responde \"SÍ\" o \"CONFIRMO\".\n9. Cuando confirma el pedido vuelve a mandar todo el resumen, con todos los datos completos, tiene que tener datos del cliente, forma de entrega, productos, cantidad, notas extras.\n\nREGLAS DE MENSAJE DE SALIDA (OBLIGATORIO Y ESTRICTO):\n\nAl final de CADA respuesta, añade UNA de estas etiquetas:\n\n- [INTENT: CHAT] → Conversación normal, preguntas, dudas, o cuando muestras el resumen y preguntas \"¿Confirmas?\". \n  **IMPORTANTE: NUNCA uses [INTENT: PEDIDO] en el mensaje donde preguntas si confirma.**\n- [INTENT: ACTUALIZAR] → El cliente te dio nombre o dirección \n- [INTENT: PEDIDO] → **SOLO** después de que el cliente haya respondido afirmativamente a la pregunta de confirmación. \n  Palabras clave: \"SÍ\", \"CONFIRMO\", \"OK\", \"ADELANTE\", \"DALE\", \"SALE\", \"VALE\", \"YES\", \"CONFIRMAR\", \"ACEPTO\".\n  **NUNCA** uses esta etiqueta en el mensaje donde muestras el resumen y preguntas.\n- [INTENT: ELSE] → No entendiste.\n- [INTENT: HUMANO] → Cuando el cliente pida explícitamente hablar con un humano (frases como \"hablar con un humano\", \"quiero hablar con una persona\", \"atención al cliente\", \"queja\", \"problema con mi pedido\", \"ayuda de un agente\", \"llamar por teléfono\"). El mensaje debe ser cortés, decir que puede ir dejando el mensaje o la queja mientras le hablas a tu compañero para que lo atienda lo antes posible. ESTE ES EL UNICO CASO DONDE VAS A IGNORAR LA GUIA DE CONVERSACION Y VAS A DIRECTAMENTE DECIR QUE VAS A COMUNICARTE CON UN COMPAÑERO.\n\nEjemplo de flujo correcto:\n\nTú: \"Tu pedido: 2 boneless BBQ y 1 Coca. Total $210. ¿Confirmas? [INTENT: CHAT]\"\nCliente: \"Sí\"\nTú: \"¡Perfecto! Pedido confirmado. Te avisamos cuando esté listo. 🍗 [INTENT: PEDIDO]\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        1952
+      ],
+      "id": "23ae8286-1957-4f20-8a05-48dffafed7e6",
+      "name": "Mesero",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 4000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst rawOutput = inputData.output || \"\";\nconst chatid = inputData.chatid || \"\";\n\n// 1. Buscar etiqueta [INTENT: ...] al final del mensaje (insensible a mayúsculas)\nconst intentRegex = /\\[INTENT:\\s*(\\w+)\\s*\\]/i;\nconst match = rawOutput.match(intentRegex);\n\nlet mensajeCliente = rawOutput;\nlet intent = \"CHAT\";  // valor por defecto\n\nif (match) {\n  intent = match[1].toUpperCase();\n  mensajeCliente = rawOutput.replace(match[0], '').trim();\n}\n\n// --- NUEVA VALIDACIÓN DE SEGURIDAD ---\n// Obtener el último mensaje del usuario (desde 'extraer datos1')\nconst mensajeUsuario = $('extraer datos1').first()?.json.mensaje || '';\nconst esConfirmacion = /^(si|sí|confirmo|ok|dale|acepto|confirmar|yes|ya|sale|vale|claro|por supuesto|adelante)$/i.test(mensajeUsuario.trim());\n\n// Si la intención es PEDIDO pero el usuario NO dijo una palabra de confirmación, la cambiamos a CHAT\nif (intent === 'PEDIDO' && !esConfirmacion) {\n  intent = 'CHAT';\n  // Restaurar mensaje original sin etiqueta para que el cliente vea el resumen completo\n  mensajeCliente = rawOutput.replace(intentRegex, '').trim();\n}\n// --- FIN VALIDACIÓN ---\n\n// Asegurar que la intención sea una de las esperadas por el Switch\nconst intentsValidos = [\"ACTUALIZAR\", \"PEDIDO\", \"CHAT\", \"ELSE\", \"HUMANO\"];\nif (!intentsValidos.includes(intent)) {\n  intent = \"CHAT\";\n}\n\n// Si después de limpiar no queda mensaje, usar un fallback\nif (!mensajeCliente) {\n  mensajeCliente = \"🤖 Procesando tu solicitud...\";\n}\n\nreturn {\n  json: {\n    output: mensajeCliente,\n    intent: intent,\n    extracted_data: {},  // Se llenará en la rama PEDIDO mediante el Cajero\n    chatid: chatid\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        1776
+      ],
+      "id": "3c128b94-2322-4e95-ac16-8d08a4d79f98",
+      "name": "Preparar camino"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// PREPARAR BASE DE DATOS - Formatear pedido para Supabase\n// ==============================================\n\nconst input = $input.first().json;\n\n// 1. Extraer el JSON del campo 'text' (viene con bloque markdown)\nlet pedidoData = {};\nif (input.text) {\n  let text = input.text;\n  // Limpiar bloque ```json ... ```\n  const jsonMatch = text.match(/```json\\s*([\\s\\S]*?)\\s*```/);\n  if (jsonMatch) {\n    try {\n      pedidoData = JSON.parse(jsonMatch[1]);\n    } catch(e) {\n      console.error('Error parseando JSON:', e);\n    }\n  } else {\n    // Intentar parsear directamente si no hay bloque\n    try {\n      pedidoData = JSON.parse(text);\n    } catch(e) {}\n  }\n} else {\n  pedidoData = input;\n}\n\n// 2. Obtener el chatid desde el nodo 'extraer datos1'\nlet chatid = '';\ntry {\n  const extraerNode = $('extraer datos1').first();\n  if (extraerNode && extraerNode.json.chatid) {\n    chatid = extraerNode.json.chatid;\n  }\n} catch(e) {\n  console.error('No se pudo obtener chatid:', e);\n}\n\n// 3. Formatear items como una sola línea (usando los campos del JSON)\nconst items = pedidoData.items || [];\nconst itemsLine = items.map(item => {\n  const cantidad = item.cant || item.cantidad || 1;\n  const producto = item.prod || item.producto || '';\n  const salsa = item.salsa ? ` (${item.salsa})` : '';\n  return `${cantidad} x ${producto}${salsa}`;\n}).join(', ');\n\n// 4. Construir objeto final para Supabase\nconst supabaseData = {\n  cliente_id: chatid,                                 // clave foránea\n  nombre: pedidoData.nombre || '',\n  direccion: pedidoData.direccion || '',\n  forma_entrega: pedidoData.metodo_entrega || 'domicilio',\n  items: itemsLine,\n  total: pedidoData.total_aproximado || pedidoData.total || 0,\n  notas: pedidoData.notas_extra || pedidoData.notas || '',\n  chatid: chatid                                      // por si acaso\n};\n\nreturn [{ json: supabaseData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        1536
+      ],
+      "id": "a54fe96f-e823-4f8a-83a7-2576f43e323a",
+      "name": "preparar base de datos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = \"Lo siento, no pude entender tu mensaje. Por favor, intenta nuevamente escribiendo tu indicacion en un solo mensaje.\";\nreturn { json: { output: mensaje } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        1920
+      ],
+      "id": "c9e23629-58c7-483c-9a94-c19885190177",
+      "name": "mensaje error"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1184,
+        2064
+      ],
+      "id": "3e4a9c37-568a-4fda-bc43-5c2b07f5467a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "menu",
+        "returnAll": true,
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        1904
+      ],
+      "id": "811cf792-59b7-4e92-8dbd-254bb40c9b5a",
+      "name": "obtener menu",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "salsas",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        2096
+      ],
+      "id": "870f53a4-e637-4634-ab5a-94b7c067aa63",
+      "name": "obtener salsas",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// OBTENER TODOS LOS DATOS DE ENTRADA (sea como vengan)\n// ==============================================\n\n// 1. Obtener todos los ítems (pueden ser uno o varios)\nconst allItems = $input.all();\n\n// 2. Extraer todos los objetos JSON en un solo array plano\nlet combinedArray = [];\n\nfor (const item of allItems) {\n  const data = item.json;\n  \n  if (Array.isArray(data)) {\n    // Si el ítem es un array, agregamos sus elementos\n    combinedArray.push(...data);\n  } \n  else if (typeof data === 'object' && data !== null) {\n    // Si es un objeto, buscamos si tiene alguna propiedad que sea un array grande\n    let foundArray = false;\n    for (const key in data) {\n      if (Array.isArray(data[key]) && data[key].length > 0) {\n        // Asumimos que el primer array grande es el que nos interesa\n        combinedArray.push(...data[key]);\n        foundArray = true;\n        break;\n      }\n    }\n    if (!foundArray) {\n      // Si no encontró arrays, asumimos que el objeto mismo es un producto/salsa\n      combinedArray.push(data);\n    }\n  }\n}\n\n// Si después de todo sigue vacío, lanzar error\nif (combinedArray.length === 0) {\n  throw new Error('No se pudo extraer ningún dato del Merge');\n}\n\n// ==============================================\n// SEPARAR MENÚ Y SALSAS\n// ==============================================\n\nconst menu = [];\nconst salsas = [];\n\nfor (const item of combinedArray) {\n  // Los productos del menú tienen campo 'precio' (número)\n  if (item.hasOwnProperty('precio') && typeof item.precio === 'number') {\n    menu.push(item);\n  } \n  // Las salsas no tienen precio, pero tienen categoría específica\n  else if (item.hasOwnProperty('categoria') && \n           ['Dulce', 'Picante', 'Especial', 'Aderezo'].includes(item.categoria)) {\n    salsas.push(item);\n  }\n  // Por si acaso algún objeto no cumple, lo enviamos a salsas como fallback\n  else {\n    salsas.push(item);\n  }\n}\n\n// Al final, antes del return\nconst staticData = $getWorkflowStaticData('global');\nstaticData.menuGlobal = { menu, salsas, timestamp: Date.now() };\nreturn { json: { menu, salsas } };\n\n// ==============================================\n// RETORNAR OBJETO CON LAS DOS PROPIEDADES\n// ==============================================\n\nreturn {\n  json: {\n    menu: menu,\n    salsas: salsas\n  }\n};\n// Al final, antes del return\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        2064
+      ],
+      "id": "0ca5a051-dd39-40b1-b5f4-947006f822d8",
+      "name": "Unir menu y salsas"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// DEPURACION: búsqueda tolerante a errores, confirmaciones, multi-tenant listo\n// ==============================================\n\n// 1. Recibir objeto limpio\nconst input = $input.first().json;\nconst clienteData = input.cliente || {};\nconst menuData = input.menu || [];\nconst salsasData = input.salsas || [];\nlet mensajeUsuario = input.mensaje_usuario || '';\n\n// 2. Función para normalizar texto (minúsculas, sin tildes, sin caracteres especiales)\nfunction normalizeText(text) {\n  if (!text) return '';\n  return text.toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, '');\n}\n\n// 3. Normalizar el mensaje del cliente (se usa en todo el código)\nconst mensajeLimpio = mensajeUsuario.trim().toLowerCase();\nconst mensajeNorm = normalizeText(mensajeUsuario);   // ← AHORA DEFINIDA AL PRINCIPIO\n\n// 4. Optimización: fecha y día (una sola vez)\nconst ahora = new Date();\nconst formatter = new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Mexico_City', weekday: 'long' });\nlet nombreDiaRaw = formatter.format(ahora);\nlet nombreDia = nombreDiaRaw.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// 5. Distancia de Levenshtein y similitud\nfunction levenshtein(a, b) {\n  const an = a.length;\n  const bn = b.length;\n  if (an === 0) return bn;\n  if (bn === 0) return an;\n  const matrix = [];\n  for (let i = 0; i <= an; i++) matrix[i] = [i];\n  for (let j = 0; j <= bn; j++) matrix[0][j] = j;\n  for (let i = 1; i <= an; i++) {\n    for (let j = 1; j <= bn; j++) {\n      const cost = a[i-1] === b[j-1] ? 0 : 1;\n      matrix[i][j] = Math.min(\n        matrix[i-1][j] + 1,\n        matrix[i][j-1] + 1,\n        matrix[i-1][j-1] + cost\n      );\n    }\n  }\n  return matrix[an][bn];\n}\n\nfunction similitud(a, b) {\n  const maxLen = Math.max(a.length, b.length);\n  if (maxLen === 0) return 1;\n  return 1 - levenshtein(a, b) / maxLen;\n}\n\n// 6. Búsqueda difusa por palabra (compara keyword contra cada palabra del texto)\nfunction matchFuzzy(keyword, textoProducto) {\n  const palabras = textoProducto.split(/\\s+/);\n  return Math.max(...palabras.map(p => similitud(keyword, p)), 0);\n}\n\n// 7. Obtener promoción del día (usa la variable global nombreDia)\nfunction obtenerPromocionDelDia(menu) {\n  const promo = menu.find(p => \n    (p.categoria === 'Ofertas Semanales' || p.categoria === 'Promociones Fijas') &&\n    (normalizeText(p.nombre).includes(nombreDia) || normalizeText(p.descripcion || '').includes(nombreDia))\n  );\n  return promo || menu.find(p => p.categoria === 'Promociones Fijas') || menu[0];\n}\n\n// 8. Validar mensajes inválidos (audio, vacío, caracteres especiales)\nconst esAudio = ['[audio]', '🎤', 'audio', ''].includes(mensajeLimpio);\nconst esMuyCorto = mensajeLimpio.length < 2 && !esAudio;\nconst esSoloCaracteresEspeciales = /^[^a-záéíóúñü0-9]+$/.test(mensajeLimpio);\nlet esMensajeInvalido = esAudio || esMuyCorto || esSoloCaracteresEspeciales;\n\n// Si no hay menú, fallback\nif (menuData.length === 0) {\n  return [{\n    json: {\n      chatid: clienteData.id || '',\n      restaurante_id: clienteData.restaurante_id || '',\n      menu_context: '⚠️ Menú no disponible temporalmente. Intenta de nuevo.',\n      mensaje_usuario: mensajeUsuario\n    }\n  }];\n}\n\n// 9. Detección de confirmaciones (antes que todo)\nconst confirmaciones = ['si', 'sí', 'no', 'ok', 'dale', 'sale', 'ya', 'claro', 'confirmo', 'acepto', 'yes', 'vale', 'perfecto', 'listo', 'adelante', 'andale'];\nconst esConfirmacion = confirmaciones.includes(mensajeLimpio);\n\nif (esConfirmacion) {\n  const outputConfirm = {\n    chatid: clienteData.id || '',\n    restaurante_id: clienteData.restaurante_id || '',\n    nombre: clienteData.nombre || '',\n    direccion: clienteData.direccion || '',\n    notas_cliente: clienteData.notas_cliente || '',\n    menu_context: '',\n    mensaje_usuario: mensajeUsuario\n  };\n  return [{ json: outputConfirm }];\n}\n\n// 10. Detección de referencias vagas (usa mensajeNorm ya definido)\nconst referenciasVagas = [\n  'de esos', 'de ellos', 'los mismos', 'lo mismo', 'eso mismo', 'ese mismo',\n  'otro igual', 'repetir', 'quiero eso', 'dame eso', 'dame esos',\n  'quiero de esos', 'quiero los mismos', 'lo de siempre', 'otra vez',\n  'los mismos de antes', 'el de antes', 'quiero', 'lo que pedí',\n  'lo anterior', 'exactamente eso', 'justo eso', 'quiero lo mismo',\n  'solo eso', 'nada más eso', 'únicamente eso', 'lo de antes',\n  'de nuevo', 'repite', 'repite lo mismo', 'lo mismo de antes'\n];\n\nconst palabrasVagas = ['eso', 'ese', 'esos', 'esa', 'esas', 'aquello', 'eso mismo'];\n\nlet esReferenciaVaga = referenciasVagas.some(exp => mensajeNorm.includes(exp));\n\nif (!esReferenciaVaga) {\n  const palabrasMsg = mensajeNorm.trim().split(/\\s+/);\n  if (palabrasMsg.length <= 2 && palabrasMsg.every(p => palabrasVagas.includes(p))) {\n    esReferenciaVaga = true;\n  }\n}\n\nif (esReferenciaVaga) {\n  const outputVago = {\n    chatid: clienteData.id || '',\n    restaurante_id: clienteData.restaurante_id || '',\n    nombre: clienteData.nombre || '',\n    direccion: clienteData.direccion || '',\n    notas_cliente: clienteData.notas_cliente || '',\n    menu_context: '',\n    mensaje_usuario: mensajeUsuario\n  };\n  return [{ json: outputVago }];\n}\n\n// 11. Manejo de mensajes inválidos (audio, caracteres) con promoción del día\nif (esMensajeInvalido) {\n  const promo = obtenerPromocionDelDia(menuData);\n  let contexto = `🎙️ No entendí tu mensaje. Te ofrezco nuestra promoción del día: ${promo.nombre} $${promo.precio}\\nPor favor, escríbeme tu pedido en texto claro.`;\n  const outputInvalido = {\n    chatid: clienteData.id || '',\n    restaurante_id: clienteData.restaurante_id || '',\n    nombre: clienteData.nombre || '',\n    direccion: clienteData.direccion || '',\n    notas_cliente: clienteData.notas_cliente || '',\n    menu_context: contexto,\n    mensaje_usuario: mensajeUsuario\n  };\n  return [{ json: outputInvalido }];\n}\n\n// 12. Detección de saludos y menú completo\nconst saludos = ['hola', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noches', 'saludos', 'hey', 'que tal', 'hola como estas'];\nconst esSaludo = saludos.some(s => mensajeNorm.includes(s));\n\nconst quiereMenuCompleto = /ver|mostrar|enseñar|todo el|el menu|todos los productos|qué productos|catálogo completo/.test(mensajeNorm) &&\n                           !/boneless|papas|nuggets|salchipulpos|coca|refresco|combo|promo/.test(mensajeNorm);\n\n// 13. Extraer palabras clave (stopwords)\nconst stopWords = ['hola','buenas','gracias','por','favor','quiero','quisiera','me','un','una','unos','unas','de','el','la','los','las','y','o','pero','si','no','con','sin','que','es','son','tengo','gustaria','quisiera','ver','mostrar','enseñar','todo','todos'];\nlet palabrasClave = mensajeNorm.split(/\\s+/).filter(w => w.length > 2 && !stopWords.includes(w));\n\n// 14. Si no hay palabras clave, no es saludo ni menú completo → ininteligible (ofrecer promo)\nif (palabrasClave.length === 0 && !esSaludo && !quiereMenuCompleto) {\n  const promo = obtenerPromocionDelDia(menuData);\n  let contexto = `❓ No entendí tu mensaje. Te ofrezco nuestra promoción del día: ${promo.nombre} $${promo.precio}\\nPor favor, escríbeme tu pedido en texto claro.`;\n  const outputIninteligible = {\n    chatid: clienteData.id || '',\n    restaurante_id: clienteData.restaurante_id || '',\n    nombre: clienteData.nombre || '',\n    direccion: clienteData.direccion || '',\n    notas_cliente: clienteData.notas_cliente || '',\n    menu_context: contexto,\n    mensaje_usuario: mensajeUsuario\n  };\n  return [{ json: outputIninteligible }];\n}\n\n// 15. Lógica de selección de productos\nlet productosSeleccionados = [];\n\nif (esSaludo || (palabrasClave.length === 0 && !quiereMenuCompleto)) {\n  const promo = obtenerPromocionDelDia(menuData);\n  if (promo) productosSeleccionados.push(promo);\n  const popularesNombres = ['boneless', 'papaboness', 'coca cola'];\n  for (const nombreBuscado of popularesNombres) {\n    const encontrado = menuData.find(p => normalizeText(p.nombre).includes(nombreBuscado));\n    if (encontrado && !productosSeleccionados.some(p => p.nombre === encontrado.nombre)) {\n      productosSeleccionados.push(encontrado);\n    }\n  }\n  if (productosSeleccionados.length === 0) productosSeleccionados = menuData.slice(0, 3);\n} \nelse if (quiereMenuCompleto) {\n  productosSeleccionados = menuData.slice(0, 12);\n} \nelse {\n  let encontrados = [];\n  // Coincidencia exacta (nombre o descripción)\n  for (const p of menuData) {\n    const textoBusqueda = normalizeText(p.nombre + ' ' + (p.descripcion || ''));\n    if (palabrasClave.some(kw => textoBusqueda.includes(kw))) {\n      encontrados.push(p);\n    }\n  }\n  // Si no hay exactos, usar fuzzy (umbral 0.72)\n  if (encontrados.length === 0) {\n    for (const p of menuData) {\n      const nombreNorm = normalizeText(p.nombre);\n      const descNorm = normalizeText(p.descripcion || '');\n      let mejorSim = 0;\n      for (const kw of palabrasClave) {\n        const simNombre = matchFuzzy(kw, nombreNorm);\n        const simDesc = matchFuzzy(kw, descNorm);\n        const sim = Math.max(simNombre, simDesc);\n        if (sim > mejorSim) mejorSim = sim;\n      }\n      if (mejorSim >= 0.72) encontrados.push(p);\n    }\n  }\n  if (encontrados.length === 0) {\n    const populares = menuData.filter(p => \n      normalizeText(p.nombre).includes('boneless') ||\n      normalizeText(p.nombre).includes('papaboness') ||\n      normalizeText(p.nombre).includes('coca cola')\n    );\n    productosSeleccionados = populares.length ? populares : menuData.slice(0, 3);\n  } else {\n    productosSeleccionados = encontrados.slice(0, 5);\n  }\n}\n\n// 16. Construir texto de productos\nlet productosText = '';\nfor (const p of productosSeleccionados) {\n  productosText += `${p.nombre} $${p.precio}`;\n  if (p.descripcion && p.descripcion.length < 70) {\n    productosText += `: ${p.descripcion}`;\n  } else if (p.descripcion) {\n    productosText += `: ${p.descripcion.substring(0, 60)}...`;\n  }\n  productosText += '\\n';\n}\n\n// 17. Salsas completas (siempre)\nconst salsasText = 'SALSAS: ' + salsasData.map(s => s.nombre).join(', ');\nconst contextoMenu = (productosText ? productosText + '\\n' : '') + salsasText;\n\n// 18. Output final\nconst output = {\n  chatid: clienteData.id || '',\n  restaurante_id: clienteData.restaurante_id || '',\n  nombre: clienteData.nombre || '',\n  direccion: clienteData.direccion || '',\n  notas_cliente: clienteData.notas_cliente || '',\n  menu_context: contextoMenu,\n  mensaje_usuario: mensajeUsuario\n};\n\nreturn [{ json: output }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        1952
+      ],
+      "id": "d18d3f73-4065-4b40-9e00-2c6c421a6b79",
+      "name": "Depuracion"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  \n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        1712
+      ],
+      "id": "a939cecf-7742-4351-ad92-327760fd8b2f",
+      "name": "extraer"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "clientes",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "=eq",
+              "keyValue": "={{ $json.chatid }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        1712
+      ],
+      "id": "c4ac1c10-f461-4816-b7c3-9289864d6f65",
+      "name": "buscar clientes",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ae574065-7a47-4532-82ef-2de68c9c00e1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -960,
+        1712
+      ],
+      "id": "dd465b09-a63e-4e52-adc0-c79ca0ec9973",
+      "name": "If "
+    },
+    {
+      "parameters": {
+        "tableId": "clientes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('extraer datos1').item.json.chatid }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $json.created_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        1568
+      ],
+      "id": "73cf30c0-aeb8-4ef9-8849-1ddbfc0ee09a",
+      "name": "agregar id",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vr9RTDAOqg8Z9X0B",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "73541559-a918-4495-a373-11678c0c6597",
+              "name": "mensaje",
+              "value": "={{ $('extraer datos1').item.json.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "7bcc3432-c448-4a7c-8f52-320e9cce066c",
+              "name": "chatid",
+              "value": "={{ $('extraer datos1').item.json.chatid }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -512,
+        1568
+      ],
+      "id": "5b2111c6-f9c8-42bd-8aa8-922365cc61d8",
+      "name": "obtener mensaje y id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// VALIDADOR: Detecta errores sin modificar el mensaje\n// ==============================================\n\nconst agentOutput = $input.first().json;\nconst originalMessage = agentOutput.output || '';\nconst intent = agentOutput.intent || 'CHAT';\nconst chatid = agentOutput.chatid || '';\n\n// Si no hay mensaje, pasar sin error\nif (!originalMessage) {\n  return [{ json: { ...agentOutput, hasError: false, errorDetails: null } }];\n}\n\n// ==============================================\n// Obtener menú real (ajusta el nombre del nodo)\n// ==============================================\nlet menuItems = [];\nlet salsasItems = [];\n\ntry {\n  // Cambia \"Merge menu y salsas\" por el nombre real de tu nodo\n  const menuNode = $('Merge menu y salsas').first();\n  if (menuNode && menuNode.json.menu) {\n    menuItems = menuNode.json.menu;\n    salsasItems = menuNode.json.salsas;\n  }\n} catch (e) {\n  console.error('No se pudo obtener el menú:', e);\n}\n\nif (menuItems.length === 0) {\n  return [{ json: { ...agentOutput, hasError: false, errorDetails: null } }];\n}\n\n// ==============================================\n// Mapas de datos reales\n// ==============================================\nconst productMap = new Map();\nfor (const p of menuItems) {\n  productMap.set(p.nombre.toLowerCase(), {\n    nombre: p.nombre,\n    precio: p.precio,\n    categoria: p.categoria\n  });\n}\n\nconst salsaSet = new Set(salsasItems.map(s => s.nombre.toLowerCase()));\n\n// ==============================================\n// Funciones auxiliares\n// ==============================================\nfunction escapeRegex(str) {\n  return str.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}\n\nconst errors = [];\n\n// 1. Verificar precios de productos mencionados\nfor (const [nombreLower, data] of productMap.entries()) {\n  const regex = new RegExp(`\\\\b${escapeRegex(nombreLower)}\\\\b`, 'i');\n  if (regex.test(originalMessage)) {\n    // Buscar precio mencionado ($140 o 140 pesos)\n    const priceRegex = /(?:\\$|\\b)(\\d{2,3})\\b(?!\\s*\\.\\d)/;\n    const match = originalMessage.match(priceRegex);\n    if (match) {\n      const mentionedPrice = parseInt(match[1]);\n      if (mentionedPrice !== data.precio) {\n        errors.push(`El precio de \"${data.nombre}\" es $${data.precio}, NO $${mentionedPrice}.`);\n      }\n    }\n  }\n}\n\n// 2. Verificar salsas inventadas\nconst lowerMessage = originalMessage.toLowerCase();\nfor (const salsa of salsaSet) {\n  // Si aparece una salsa que no está en el set\n  if (lowerMessage.includes(salsa)) continue;\n  // Detectar frases como \"salsa de X\"\n  const salsaMatch = lowerMessage.match(/salsa\\s+de\\s+([a-záéíóúñ]+)/);\n  if (salsaMatch && !salsaSet.has(salsaMatch[1])) {\n    errors.push(`La salsa \"${salsaMatch[1]}\" no existe. Salsas disponibles: ${Array.from(salsaSet).slice(0, 5).join(', ')}.`);\n    break;\n  }\n}\n\n// 3. Verificar promociones inventadas\nconst promosReales = menuItems\n  .filter(p => p.categoria.includes('Promo') || p.categoria.includes('Oferta'))\n  .map(p => p.nombre.toLowerCase());\nconst promoMatch = originalMessage.match(/(promo|oferta|combo)\\s+([a-záéíóúñ\\s]+)/i);\nif (promoMatch) {\n  const promoName = promoMatch[2].trim().toLowerCase();\n  const exists = promosReales.some(p => promoName.includes(p) || p.includes(promoName));\n  if (!exists && !promoName.includes('lunes')) { // excepción para días\n    errors.push(`La promoción \"${promoMatch[0]}\" no está en el menú. Promociones reales: ${promosReales.slice(0, 3).join(', ')}.`);\n  }\n}\n\nconst hasError = errors.length > 0;\nconst errorDetails = hasError ? errors.join(' ') : null;\n\n// ==============================================\n// Retornar con indicador de error\n// ==============================================\nreturn [{\n  json: {\n    output: originalMessage,\n    intent: intent,\n    chatid: chatid,\n    hasError: hasError,\n    errorDetails: errorDetails,\n    originalAgentOutput: agentOutput\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        1824
+      ],
+      "id": "51d475f1-70ce-4d36-b24e-86b5268d59ec",
+      "name": "verificar datos menus"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "64dc911d-12e7-488a-bbc3-452a1584641d",
+              "leftValue": "={{ $json.hasError }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1184,
+        1824
+      ],
+      "id": "15dc048c-423f-4900-a13c-d918db16b711",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// CREAR FEEDBACK PARA EL BOT\n// ==============================================\n\nconst data = $input.first().json;\nconst errorMsg = data.errorDetails;\nconst originalOutput = data.output;\nconst chatid = data.chatid;\n\n// Obtener el mensaje original del cliente desde el nodo 'extraer datos1'\nlet mensajeCliente = '';\ntry {\n  const extraerNode = $('extraer datos1').first();\n  if (extraerNode && extraerNode.json.mensaje) {\n    mensajeCliente = extraerNode.json.mensaje;\n  }\n} catch (e) {\n  mensajeCliente = '(no se pudo recuperar)';\n}\n\n// Obtener el menú contexto (desde el nodo que lo preparó)\nlet menuContext = '';\ntry {\n  const menuContextNode = $('Preparar contexto para Mesero').first();\n  if (menuContextNode && menuContextNode.json.menu_context) {\n    menuContext = menuContextNode.json.menu_context;\n  }\n} catch (e) {\n  menuContext = '(menú no disponible)';\n}\n\n// Construir feedback para el bot\nconst feedbackMessage = `❌ **ERROR EN TU RESPUESTA ANTERIOR**\n\n${errorMsg}\n\n**Contexto:**\n- Cliente preguntó: \"${mensajeCliente}\"\n- Tu respuesta incorrecta fue: \"${originalOutput}\"\n\n**Instrucción:** \nReescribe tu respuesta usando SOLO los datos del menú real que tienes a continuación. No inventes precios, productos ni promociones.\n\n${menuContext}\n\nAhora escribe la respuesta CORREGIDA para el cliente (sin incluir este mensaje de feedback):`;\n\n// Retornar en el formato que espera el Mesero (como si fuera un nuevo mensaje de usuario)\nreturn [{\n  json: {\n    output: feedbackMessage,\n    intent: 'CHAT',  // Forzar CHAT para evitar que se dispare PEDIDO\n    chatid: chatid,\n    nombre: data.originalAgentOutput?.nombre || '',\n    direccion: data.originalAgentOutput?.direccion || '',\n    notas_cliente: data.originalAgentOutput?.notas_cliente || '',\n    menu_context: menuContext,\n    mensaje_usuario: feedbackMessage  // El Mesero usará esto como entrada\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        2128
+      ],
+      "id": "f0d7c6dd-6469-47f0-bc4e-1e382feef199",
+      "name": "feedback para el bot"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -64,
+        1952
+      ],
+      "id": "b81e5956-be7c-4e68-9e4f-07e64a844ba5",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==============================================\n// LIMPIAR DATOS: elimina campos innecesarios, conserva descripciones\n// ==============================================\n\n// 1. Obtener los dos objetos del Merge (cliente y menu+salsas)\nconst items = $input.all();\nlet clienteData = {};\nlet menuData = [];\nlet salsasData = [];\n\nfor (const item of items) {\n  const data = item.json;\n  // Si tiene 'menu' y 'salsas' es el catálogo\n  if (data.hasOwnProperty('menu') && data.hasOwnProperty('salsas')) {\n    menuData = data.menu;\n    salsasData = data.salsas;\n  } \n  // Si tiene 'id' y además 'nombre' (sin tener 'menu') es el cliente\n  else if (data.hasOwnProperty('id') && !data.hasOwnProperty('menu')) {\n    clienteData = {\n      id: data.id,\n      nombre: data.nombre,\n      direccion: data.direccion,\n      notas_cliente: data.notas_cliente\n    };\n  }\n}\n\n// 2. Obtener el mensaje del cliente desde el nodo 'extraer datos1'\nlet mensajeUsuario = '';\ntry {\n  const extraerNode = $('extraer datos1').first();\n  if (extraerNode && extraerNode.json.mensaje) {\n    mensajeUsuario = extraerNode.json.mensaje;\n  }\n} catch (e) {\n  console.error('No se pudo obtener mensaje del cliente:', e);\n}\n\n// 3. Limpiar menú: solo nombre, precio, categoría, descripción (si existe)\nconst menuLimpio = (menuData || []).map(p => ({\n  nombre: p.nombre,\n  precio: p.precio,\n  categoria: p.categoria,\n  descripcion: p.descripcion || ''   // incluimos descripción (vacía si no tiene)\n}));\n\n// 4. Limpiar salsas: solo nombre y categoría\nconst salsasLimpio = (salsasData || []).map(s => ({\n  nombre: s.nombre,\n  categoria: s.categoria\n}));\n\n// 5. Construir objeto de salida\nconst output = {\n  cliente: clienteData,\n  menu: menuLimpio,\n  salsas: salsasLimpio,\n  mensaje_usuario: mensajeUsuario\n};\n\nreturn [{ json: output }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1952
+      ],
+      "id": "c267de56-255e-484c-a201-16176e3e4769",
+      "name": "limpiar datos"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003828462003",
+        "text": "=🛎️ *NUEVO PEDIDO* 🛎️\nCliente: {{ $json.nombre }}\nProductos: {{ $json.items }}\nNotas: {{ $json.notas }}\nForma de entrega: {{ $json.direccion }}\nTotal a cobrar: ${{ $json.total }}$\nContacto: {{ $json.cliente_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2880,
+        1776
+      ],
+      "id": "058e5f97-e061-42d2-b262-2834c06b843d",
+      "name": "Mensaje confirmacion pedido",
+      "webhookId": "d1eb6e9b-5288-4322-a709-c3aedc47b3e3",
+      "credentials": {
+        "telegramApi": {
+          "id": "LoTVx7j9sJL2gZ4S",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003828462003",
+        "text": "=🚨🚨‼️‼️ATENDER MENSAJE DE WHATSAPP‼️‼️🚨🚨\nEl cliente {{ $json.chatid }} tiene un problema, atender lo antes posible\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2288,
+        2160
+      ],
+      "id": "a2956ab9-3014-4503-8d8b-a4985e381cff",
+      "name": "Send a text message",
+      "webhookId": "b4b018b5-5d64-413c-bd2d-12af2c5be93e",
+      "credentials": {
+        "telegramApi": {
+          "id": "LoTVx7j9sJL2gZ4S",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook1": [
+      {
+        "json": {
+          "headers": {
+            "connection": "upgrade",
+            "host": "botiquin.duckdns.org",
+            "x-real-ip": "136.109.182.29",
+            "x-forwarded-for": "136.109.182.29",
+            "x-forwarded-proto": "https",
+            "content-length": "1429",
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "user-agent": "axios/1.13.2",
+            "accept-encoding": "gzip, compress, deflate, br"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "messages.upsert",
+            "instance": "botsito",
+            "data": {
+              "key": {
+                "remoteJid": "5213314579282@s.whatsapp.net",
+                "remoteJidAlt": "5213314579282@s.whatsapp.net",
+                "fromMe": false,
+                "id": "ACF352FEE4EC3DD11E6C8703530851EE",
+                "participant": "",
+                "addressingMode": "lid"
+              },
+              "pushName": "carlos pantoja",
+              "status": "DELIVERY_ACK",
+              "message": {
+                "conversation": "Si",
+                "messageContextInfo": {
+                  "threadId": [],
+                  "deviceListMetadata": {
+                    "senderKeyIndexes": [],
+                    "recipientKeyIndexes": [],
+                    "senderKeyHash": {
+                      "0": 196,
+                      "1": 199,
+                      "2": 210,
+                      "3": 105,
+                      "4": 65,
+                      "5": 96,
+                      "6": 242,
+                      "7": 20,
+                      "8": 75,
+                      "9": 240
+                    },
+                    "senderTimestamp": {
+                      "low": 1776397667,
+                      "high": 0,
+                      "unsigned": true
+                    },
+                    "recipientKeyHash": {
+                      "0": 212,
+                      "1": 46,
+                      "2": 160,
+                      "3": 15,
+                      "4": 196,
+                      "5": 73,
+                      "6": 61,
+                      "7": 138,
+                      "8": 229,
+                      "9": 119
+                    },
+                    "recipientTimestamp": {
+                      "low": 1776462552,
+                      "high": 0,
+                      "unsigned": true
+                    }
+                  },
+                  "deviceListMetadataVersion": 2,
+                  "messageSecret": {
+                    "0": 25,
+                    "1": 39,
+                    "2": 15,
+                    "3": 222,
+                    "4": 92,
+                    "5": 206,
+                    "6": 187,
+                    "7": 2,
+                    "8": 24,
+                    "9": 212,
+                    "10": 226,
+                    "11": 112,
+                    "12": 153,
+                    "13": 161,
+                    "14": 79,
+                    "15": 90,
+                    "16": 180,
+                    "17": 2,
+                    "18": 169,
+                    "19": 60,
+                    "20": 188,
+                    "21": 249,
+                    "22": 31,
+                    "23": 209,
+                    "24": 253,
+                    "25": 81,
+                    "26": 158,
+                    "27": 250,
+                    "28": 141,
+                    "29": 88,
+                    "30": 66,
+                    "31": 248
+                  }
+                }
+              },
+              "messageType": "conversation",
+              "messageTimestamp": 1777141130,
+              "instanceId": "cd133d3a-552e-40d9-8f7b-600f7c937e16",
+              "source": "android"
+            },
+            "destination": "https://botiquin.duckdns.org/n8n/webhook/web",
+            "date_time": "2026-04-25T15:18:50.489Z",
+            "sender": "5213351259239@s.whatsapp.net",
+            "server_url": "https://botiquin.duckdns.org",
+            "apikey": "7E53873CD527-4790-8641-9E98A488294F"
+          },
+          "webhookUrl": "https://botiquin.duckdns.org/n8n/webhook/web",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Depuracion": [
+      {
+        "json": {
+          "chatid": "523314579282",
+          "restaurante_id": "",
+          "nombre": "",
+          "direccion": "",
+          "notas_cliente": "",
+          "menu_context": "",
+          "mensaje_usuario": "Si"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "dedup check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer datos1": {
+      "main": [
+        [
+          {
+            "node": "buscar clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Cliente1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Pedido1": {
+      "main": [
+        [
+          {
+            "node": "Mensaje confirmacion pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar mensaje final",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cajero - Extractor JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar mensaje final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "mensaje error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Preparar mensaje final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Cajero - Extractor JSON",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Mesero",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Preparar camino",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Mesero",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar mensaje final": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dedup check": {
+      "main": [
+        [
+          {
+            "node": "extraer datos1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "obtener menu",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "obtener salsas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Preparar mensaje final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Update Cliente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cajero - Extractor JSON": {
+      "main": [
+        [
+          {
+            "node": "preparar base de datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mesero": {
+      "main": [
+        [
+          {
+            "node": "verificar datos menus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar camino": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "preparar base de datos": {
+      "main": [
+        [
+          {
+            "node": "Create Pedido1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje error": {
+      "main": [
+        [
+          {
+            "node": "Preparar mensaje final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener menu": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener salsas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Unir menu y salsas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir menu y salsas": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Depuracion": {
+      "main": [
+        [
+          {
+            "node": "Mesero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraer": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar clientes": {
+      "main": [
+        [
+          {
+            "node": "If ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If ": {
+      "main": [
+        [
+          {
+            "node": "extraer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "agregar id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agregar id": {
+      "main": [
+        [
+          {
+            "node": "obtener mensaje y id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener mensaje y id": {
+      "main": [
+        [
+          {
+            "node": "extraer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar datos menus": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "feedback para el bot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "feedback para el bot": {
+      "main": [
+        [
+          {
+            "node": "Mesero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "limpiar datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar datos": {
+      "main": [
+        [
+          {
+            "node": "Depuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "IkWshmHSMoSXE0CV",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "539b2144-14cd-404b-a1e4-54d488dc22d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db6d7913e5a131c6e4038e8a3d89ed2d5c3335b2bf257179ca9a983a862733cd"
+  },
+  "id": "xMXMQ4ltHQOVBwwR",
+  "tags": []
+}
