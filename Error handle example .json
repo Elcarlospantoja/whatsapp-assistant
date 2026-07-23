@@ -1,0 +1,139 @@
+{
+  "name": "Error Handler - Bite Society Bot",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        304
+      ],
+      "id": "d0e886da-3dc0-40e4-8787-107b3d1aa4bb",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003828462003",
+        "text": "🚨 Error en Bite Society Bot\n\nChat: {{ $json.chatid }}\nNodo: {{ $json.error_node }}\nMensaje: {{ $json.error_message }}\nHora: {{ $json.timestamp }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        384
+      ],
+      "id": "63039f90-4cb1-4342-8179-c508e4cf5790",
+      "name": "Telegram Alert",
+      "webhookId": "cfe3c03f-d545-4ac8-b885-a45e7316a6b7",
+      "credentials": {
+        "telegramApi": {
+          "id": "LoTVx7j9sJL2gZ4S",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.urlserver }}/message/sendText/{{ $json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "=={{ $json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.chatid }}\",\n  \"text\": \"{{ $json.mensaje }}\",\n  \"delay\": 3000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        192
+      ],
+      "id": "b35cdbe4-722f-45bc-8d49-f30f5c6f06f5",
+      "name": "Enviar Mensaje de Error al Cliente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recibir el error directamente del Error Trigger\nconst errorData = $input.first().json;\n\n// Buscar el mensaje de error en la estructura que llega\nlet errorMessage = '';\n\n// Diferentes lugares donde puede estar el mensaje\nif (errorData.execution?.error?.messages?.length) {\n  errorMessage = errorData.execution.error.messages[0];\n} else if (errorData.execution?.error?.message) {\n  errorMessage = errorData.execution.error.message;\n} else if (errorData.error?.message) {\n  errorMessage = errorData.error.message;\n} else if (typeof errorData === 'string') {\n  errorMessage = errorData;\n} else {\n  errorMessage = JSON.stringify(errorData);\n}\n\n// Extraer el número de teléfono del mensaje de error\n// Busca una secuencia de 10 a 13 dígitos (número mexicano con código país)\nlet chatid = '';\nconst phoneMatch = errorMessage.match(/(\\d{10,13})/);\nif (phoneMatch) {\n  chatid = phoneMatch[1];\n  // Si empieza con 521, cambiar a 52\n  if (chatid.startsWith('521')) {\n    chatid = '52' + chatid.substring(3);\n  }\n}\n\n// Si aún no hay chatid, intentar buscarlo en los parámetros del nodo que falló\nif (!chatid && errorData.execution?.error?.node?.parameters) {\n  const params = errorData.execution.error.node.parameters;\n  // Buscar en fieldsUi.fieldValues\n  if (params.fieldsUi?.fieldValues) {\n    const idField = params.fieldsUi.fieldValues.find(f => f.fieldId === 'id');\n    if (idField && idField.fieldValue) {\n      // La expresión puede ser algo como \"={{ $('extraer datos1').item.json.chatid }}\"\n      // Extraemos el número con otro regex si aparece en la expresión\n      const exprMatch = idField.fieldValue.match(/(\\d{10,13})/);\n      if (exprMatch) chatid = exprMatch[1];\n    }\n  }\n}\n\n// Valores por defecto para la API de WhatsApp\nconst instancia = 'botsito';\nconst apikey = '7E53873CD527-4790-8641-9E98A488294F';\nconst urlserver = 'https://botiquin.duckdns.org';\n\n// Mensaje amigable para el cliente\nconst mensajeError = `❌ *Ocurrió un problema técnico*\\n\\nNo pudimos procesar tu solicitud en este momento. Por favor, intenta de nuevo en unos segundos.\\n\\nSi el problema persiste, contacta a nuestro equipo.`;\n\n// Log interno para depuración (opcional: enviar a Telegram el chatid extraído)\nconsole.log('Chatid extraído:', chatid);\nconsole.log('Mensaje de error:', errorMessage);\n\n// Devolver los datos para enviar por WhatsApp\nreturn [{\n  json: {\n    chatid: chatid,\n    instancia: instancia,\n    apikey: apikey,\n    urlserver: urlserver,\n    mensaje: mensajeError,\n    debug_error: errorMessage  // para depuración, puedes quitarlo después\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        144
+      ],
+      "id": "00309fb5-88a7-4c65-a875-280643d7a167",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        -320,
+        304
+      ],
+      "id": "7be558f7-68c4-4871-938c-98dcccd44c94",
+      "name": "Preparar Datos del Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos del Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensaje de Error al Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos del Error": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fd54f76a-884f-4ebd-b872-87f04c438978",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "db6d7913e5a131c6e4038e8a3d89ed2d5c3335b2bf257179ca9a983a862733cd"
+  },
+  "id": "IkWshmHSMoSXE0CV",
+  "tags": []
+}
